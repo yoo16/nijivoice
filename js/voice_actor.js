@@ -3,19 +3,22 @@ let actorsData = [];
 
 // メイン表示部分の要素を取得
 const actorCard = document.getElementById('actor');
-const img = actorCard.querySelector('img');
-const nameEl = actorCard.querySelector('h2');
-const textarea = actorCard.querySelector('textarea');
+const actorImg = document.getElementById('actor-image');
+const actorName = document.getElementById('actor-name');
+const actorMessage = document.getElementById('actor-message');
+const actorAudio = document.getElementById('actor-audio');
 const createAudioButton = document.getElementById('create-audio-btn');
 const audioContainer = document.getElementById('audio-container');
-const actorAudio = document.getElementById('actor-audio');
 const downloadBtn = document.getElementById('download-btn');
 
+const imageLoading = document.getElementById('image-loading');
+const voiceLoading = document.getElementById('voice-loading');
+
 /**
- * getActor()
+ * getActors()
  * 声優一覧を取得して表示する
  */
-async function getActor() {
+async function getActors() {
     try {
         const options = {
             method: 'GET',
@@ -28,9 +31,7 @@ async function getActor() {
         const uri = 'https://api.nijivoice.com/api/platform/v1/voice-actors';
         const response = await fetch(uri, options);
         const data = await response.json();
-        // グローバル変数に保持しておく
-        actorsData = data.voiceActors;
-        displayActors(data);
+        return data.voiceActors;
     } catch (err) {
         console.error(err);
     }
@@ -89,15 +90,31 @@ function selectActor(id) {
     const actor = actorsData.find(actor => actor.id === id);
     if (!actor) return;
 
+    // 更新前に画像ローディング表示
+    imageLoading.classList.remove('hidden');
+
     // 要素の内容を更新
-    img.src = actor.smallImageUrl;
-    img.alt = actor.name;
-    nameEl.textContent = actor.name;
-    textarea.placeholder = actor.sampleScript || '台本を入力してください';
+    actorImg.src = actor.smallImageUrl;
+    actorImg.alt = actor.name;
+    actorName.textContent = actor.name;
+    actorMessage.placeholder = actor.sampleScript || '台本を入力してください';
+    // 初期音声はサンプル音声URLがあれば更新（なければそのまま）
+    actorAudio.src = actor.sampleVoiceUrl || '';
+
+    // 画像の読み込み完了時にローディングを非表示
+    actorImg.onload = () => {
+        imageLoading.classList.add('hidden');
+        actorImg.classList.remove('invisible');
+    };
 
     // 「音声作成＆再生」ボタンのクリックイベントを更新
     createAudioButton.onclick = () => {
-        const message = document.getElementById('message').value;
+        // 音声生成中はローディング表示
+        voiceLoading.classList.remove('hidden');
+        // ダウンロードリンクが表示されていたら非表示にする
+        audioContainer.classList.add('hidden');
+
+        const message = actorMessage.value;
         createVoice(actor.id, message);
     };
 
@@ -105,6 +122,12 @@ function selectActor(id) {
     actorCard.scrollIntoView({ behavior: 'smooth' });
 }
 
+/**
+ * displayBlance()
+ * 
+ * クレジット残高
+ * @param {*} remainingBalance 
+ */
 function displayBlance(remainingBalance) {
     const balanceContainer = document.getElementById('balance');
     balanceContainer.textContent = `残高: ${remainingBalance}`;
@@ -113,15 +136,9 @@ function displayBlance(remainingBalance) {
 /**
  * createVoice()
  * 
- * 指定した声優の音声生成を行い、生成された mp3 を再生・ダウンロードできるようにする
- * レスポンスは generatedVoice オブジェクトで、base64Audio, duration, remainingCredits が含まれる
- * @param {string} id - 声優のID
- * @param {HTMLElement} container - 生成された audio 要素を追加するコンテナ
- */
-/**
- * createVoice()
- * 指定した声優の音声生成を行い、生成された mp3 を再生・ダウンロードできるようにする
- * レスポンスは generatedVoice オブジェクトで、audioFileUrl, audioFileDownloadUrl, remainingCredits が含まれる（例）
+ * 指定した声優の音声生成
+ * mp3 を再生・ダウンロード
+ * 
  * @param {string} id - 声優のID
  * @param {string} message - 台本（メッセージ）
  */
@@ -142,7 +159,9 @@ async function createVoice(id, message) {
             displayBlance(generatedVoice.remainingCredits);
         }
 
-        // もし audioContainer が非表示状態であれば、hidden クラスを削除して表示
+        // 表示済みのローディングを非表示
+        voiceLoading.classList.add('hidden');
+        // audioContainer は常に表示状態
         audioContainer.classList.remove('hidden');
     }
 }
@@ -180,61 +199,39 @@ async function getBalance() {
  * @param {*} data - 取得した声優データオブジェクト
  */
 function displayActors(data) {
+    // グローバル保持
+    actorsData = data;
+
     const actorListContainer = document.getElementById('actorList');
-    actorListContainer.innerHTML = ''; // 既存データをクリア
+    // コンテナをクリア
+    actorListContainer.innerHTML = '';
 
-    selectActor(data.voiceActors[0].id);
+    // 先頭の声優を選択状態にする（任意）
+    selectActor(actorsData[0].id);
 
-    data.voiceActors.forEach(actor => {
-        // カードの外枠
-        const card = document.createElement('div');
-        card.className = 'bg-white rounded-lg shadow overflow-hidden flex flex-col';
+    // 各声優の HTML をテンプレートリテラルで作成
+    const html = actorsData
+        .map(actor => {
+            return `
+        <div class="bg-white rounded-lg shadow overflow-hidden flex flex-col">
+            <img src="${actor.smallImageUrl}" alt="${actor.name}" class="w-full h-96 object-cover object-top">
+            <div class="p-4 flex flex-col flex-grow">
+                <h2 class="text-xl font-semibold mb-2">${actor.name}</h2>
+                <p class="text-gray-700 mb-4 flex-grow">${actor.sampleScript}</p>
+                <p class="text-sm text-gray-500">年齢: ${actor.age} / 性別: ${actor.gender}</p>
+                <button class="mt-4 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600" onclick="selectActor('${actor.id}')">選択</button>
+            </div>
+        </div>
+        `;
+        })
+        .join('');
 
-        // 画像部分
-        const img = document.createElement('img');
-        img.src = actor.smallImageUrl;
-        img.alt = actor.name;
-        img.className = 'w-full h-96 object-cover object-top';
-
-        // 内容部分
-        const content = document.createElement('div');
-        content.className = 'p-4 flex flex-col flex-grow';
-
-        // 名前
-        const nameEl = document.createElement('h2');
-        nameEl.textContent = actor.name;
-        nameEl.className = 'text-xl font-semibold mb-2';
-
-        // サンプルスクリプト
-        const scriptEl = document.createElement('p');
-        scriptEl.textContent = actor.sampleScript;
-        scriptEl.className = 'text-gray-700 mb-4 flex-grow';
-
-        // 年齢・性別
-        const extraInfo = document.createElement('p');
-        extraInfo.textContent = `年齢: ${actor.age} / 性別: ${actor.gender}`;
-        extraInfo.className = 'text-sm text-gray-500';
-
-        // 選択ボタン（クリックでメイン表示を更新）
-        const selectButton = document.createElement('button');
-        selectButton.textContent = '選択';
-        selectButton.className = 'mt-4 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600';
-        selectButton.onclick = () => selectActor(actor.id);
-
-        // 要素の組み立て
-        content.appendChild(nameEl);
-        content.appendChild(scriptEl);
-        content.appendChild(extraInfo);
-        content.appendChild(selectButton);
-
-        card.appendChild(img);
-        card.appendChild(content);
-
-        // コンテナに追加
-        actorListContainer.appendChild(card);
-    });
+    actorListContainer.innerHTML = html;
 }
 
 // APIから各種データ取得
-getActor();
-getBalance();
+(async () => {
+    const actorData = await getActors();
+    displayActors(actorData);
+    await getBalance();
+})();

@@ -7,6 +7,28 @@
     <title>Voice Actor List</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* シンプルなスピナー（CSSアニメーション）の例 */
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3490dc;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            animation: spin 1s linear infinite;
+            margin: auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </head>
 
 <body class="bg-gray-100">
@@ -23,21 +45,37 @@
         <!-- メインの Actor 表示（選択中の声優） -->
         <div id="actor" class="p-4 flex flex-col items-center">
             <div class="bg-white rounded-lg shadow w-96">
-                <img src="" alt="" class="w-full h-96 object-cover object-top">
-                <div class="p-4 flex flex-col">
-                    <h2 class="text-xl font-semibold mb-2"></h2>
+                <!-- 画像と画像ローディング用のラッパー -->
+                <div class="relative">
+                    <img id="actor-image" src="" alt="" class="invisible w-full h-96 object-cover object-top">
+                    <!-- 画像ローディングスピナー。初期状態は表示（画像読み込み後に非表示にします） -->
+                    <div id="image-loading"
+                        class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
+                        <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin">
+                        </div>
+                    </div>
+                </div>
+                <div class="px-4 flex flex-col">
+                    <h2 id="actor-name" class="p-3 text-center text-xl font-semibold mb-2"></h2>
                     <!-- メインの音声生成用テキスト入力 -->
-                    <textarea id="message" class="text-gray-700 p-3 border border-gray-300 rounded-lg" rows="4"
+                    <textarea id="actor-message" class="text-gray-700 p-3 border border-gray-300 rounded-lg" rows="4"
                         placeholder="春休みサイコー！"></textarea>
+                    <!-- ローディング表示（音声生成中用） -->
+                    <div id="voice-loading" class="mt-4 hidden flex items-center justify-center">
+                        <div
+                            class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mr-2">
+                        </div>
+                        <span>生成中…</span>
+                    </div>
+                    <audio id="actor-audio" controls class="w-full mt-4"></audio>
                     <!-- メインの音声生成ボタン -->
                     <button id="create-audio-btn"
-                        class="mt-4 bg-sky-500 text-white py-2 px-4 rounded hover:bg-blue-600">
-                        音声作成＆再生
+                        class="my-4 bg-sky-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                        音声生成
                     </button>
                 </div>
-                <!-- 事前に用意した再生用 audio タグとダウンロードリンク（初期状態は非表示） -->
-                <div id="audio-container" class="p-4 flex flex-col">
-                    <audio id="actor-audio" controls class="mt-4"></audio>
+                <!-- 事前に用意したダウンロードリンク（初期状態は非表示） -->
+                <div id="audio-container" class="p-4 flex flex-col hidden">
                     <a id="download-btn" href="#" download="generated_voice.mp3"
                         class="block mt-2 bg-black text-white text-center py-2 px-4 rounded hover:bg-blue-600">
                         Download MP3
