@@ -2,6 +2,7 @@
 let actorsData = [];
 
 // メイン表示部分の要素を取得
+const actorListContainer = document.getElementById('actorList');
 const actorCard = document.getElementById('actor');
 const actorImg = document.getElementById('actor-image');
 const actorName = document.getElementById('actor-name');
@@ -16,7 +17,7 @@ const voiceLoading = document.getElementById('voice-loading');
 
 /**
  * getActors()
- * 声優一覧を取得して表示する
+ * 声優一覧APIを取得
  */
 async function getActors() {
     try {
@@ -31,6 +32,7 @@ async function getActors() {
         const uri = 'https://api.nijivoice.com/api/platform/v1/voice-actors';
         const response = await fetch(uri, options);
         const data = await response.json();
+        console.log(data)
         return data.voiceActors;
     } catch (err) {
         console.error(err);
@@ -40,7 +42,8 @@ async function getActors() {
 /**
  * getVoice()
  * 
- * 音声生成API（POST）
+ * 音声生成APIをPOSTして音声生成&取得
+ * 
  * @param {*} id 
  * @param {*} message 
  * @returns 
@@ -77,6 +80,32 @@ async function getVoice(id, message) {
         return data;
     } catch (err) {
         console.error("音声生成エラー: ", err);
+    }
+}
+
+/**
+ * getBalance()
+ * 
+ * 残高情報APIを取得
+ */
+async function getBalance() {
+    try {
+        const options = {
+            method: 'GET',
+            headers: {
+                accept: 'application/json',
+                'x-api-key': API_KEY
+            }
+        };
+
+        const uri = 'https://api.nijivoice.com/api/platform/v1/balances';
+        const response = await fetch(uri, options);
+        const data = await response.json();
+        console.log(data)
+
+        return data.balances.remainingBalance;
+    } catch (err) {
+        console.error("残高取得エラー: ", err);
     }
 }
 
@@ -148,7 +177,6 @@ async function createVoice(id, message) {
     const data = await getVoice(id, message);
     // レスポンスから生成されたオブジェクトを取得
     const { generatedVoice } = data;
-    console.log(generatedVoice)
     if (generatedVoice && generatedVoice.audioFileUrl && generatedVoice.audioFileDownloadUrl) {
         // 事前に用意した audio タグとダウンロードリンクの src/href を更新するだけで中身をクリアしない
         actorAudio.src = generatedVoice.audioFileUrl;
@@ -166,32 +194,6 @@ async function createVoice(id, message) {
     }
 }
 
-/**
- * getBalance()
- * 残高情報を取得して表示
- */
-async function getBalance() {
-    try {
-        const options = {
-            method: 'GET',
-            headers: {
-                accept: 'application/json',
-                'x-api-key': API_KEY
-            }
-        };
-
-        const uri = 'https://api.nijivoice.com/api/platform/v1/balances';
-        const response = await fetch(uri, options);
-        const data = await response.json();
-        console.log(data)
-
-        // data の構造に合わせて remainingBalance を取得
-        const remainingBalance = data.balances.remainingBalance;
-        displayBlance(remainingBalance);
-    } catch (err) {
-        console.error("残高取得エラー: ", err);
-    }
-}
 
 /**
  * displayActors()
@@ -199,12 +201,11 @@ async function getBalance() {
  * @param {*} data - 取得した声優データオブジェクト
  */
 function displayActors(data) {
-    // グローバル保持
-    actorsData = data;
-
-    const actorListContainer = document.getElementById('actorList');
     // コンテナをクリア
     actorListContainer.innerHTML = '';
+
+    // グローバル保持
+    actorsData = data;
 
     // 先頭の声優を選択状態にする（任意）
     selectActor(actorsData[0].id);
@@ -226,6 +227,7 @@ function displayActors(data) {
         })
         .join('');
 
+    // コンテナ更新
     actorListContainer.innerHTML = html;
 }
 
@@ -233,5 +235,7 @@ function displayActors(data) {
 (async () => {
     const actorData = await getActors();
     displayActors(actorData);
-    await getBalance();
+
+    const remainingBalance = await getBalance();
+    displayBlance(remainingBalance);
 })();
