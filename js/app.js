@@ -1,7 +1,9 @@
 // グローバルに取得した声優一覧を保持（selectActorで利用）
 let actorsData = [];
+let message = '';
 
 // メイン表示部分の要素を取得
+const messageContainer = document.getElementById('message');
 const actorListContainer = document.getElementById('actorList');
 const actorCard = document.getElementById('actor');
 const actorImg = document.getElementById('actor-image');
@@ -36,6 +38,7 @@ async function getActors() {
         return data.voiceActors;
     } catch (err) {
         console.error(err);
+        messageContainer.textContent = '声優一覧の取得に失敗しました。';
     }
 }
 
@@ -138,13 +141,14 @@ function selectActor(id) {
 
     // 「音声作成＆再生」ボタンのクリックイベントを更新
     createAudioButton.onclick = () => {
-        // 音声生成中はローディング表示
-        voiceLoading.classList.remove('hidden');
-        // ダウンロードリンクが表示されていたら非表示にする
-        audioContainer.classList.add('hidden');
-
-        const message = actorMessage.value;
-        createVoice(actor.id, message);
+        if (confirm('音声を生成しますか？\n生成にはクレジットが消費されます。')) {
+            // 音声生成中はローディング表示
+            voiceLoading.classList.remove('hidden');
+            // ダウンロードリンクが表示されていたら非表示にする
+            audioContainer.classList.add('hidden');
+            // 音声生成APIを呼び出し
+            createVoice(actor.id, actorMessage.value);
+        }
     };
 
     // メインの Actor 表示部分にスムーススクロール
@@ -171,10 +175,10 @@ function displayBlance(remainingBalance) {
  * @param {string} id - 声優のID
  * @param {string} message - 台本（メッセージ）
  */
-async function createVoice(id, message) {
-    if (!message.trim()) return;
+async function createVoice(id, text) {
+    if (!text.trim()) return;
 
-    const data = await getVoice(id, message);
+    const data = await getVoice(id, text);
     // レスポンスから生成されたオブジェクトを取得
     const { generatedVoice } = data;
     if (generatedVoice && generatedVoice.audioFileUrl && generatedVoice.audioFileDownloadUrl) {
