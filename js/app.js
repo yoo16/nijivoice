@@ -223,7 +223,11 @@ function displayActors(data) {
             <div class="p-4 flex flex-col flex-grow">
                 <h2 class="text-xl font-semibold mb-2">${actor.name}</h2>
                 <p class="text-gray-700 mb-4 flex-grow">${actor.sampleScript}</p>
-                <p class="text-sm text-gray-500">年齢: ${actor.age} / 性別: ${actor.gender}</p>
+                <p class="text-sm text-gray-500">
+                    年齢: ${actor.age} 
+                    / 
+                    性別: ${actor.gender}
+                </p>
                 <button class="mt-4 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600" onclick="selectActor('${actor.id}')">選択</button>
             </div>
         </div>
